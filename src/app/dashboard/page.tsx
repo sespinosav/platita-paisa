@@ -22,6 +22,7 @@ interface BalanceData {
 }
 
 export default function Dashboard({ token, user, onLogout }: DashboardProps) {
+  const [userCount, setUserCount] = useState<number | null>(null);
   const tips = [
     "Pana, recordá que cada pesito cuenta. ¡Ahorrar de a poquito también suma!",
     "No gastés en lo que no necesitás, así te rinde más la platica.",
@@ -64,8 +65,22 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
     }
   };
 
+
   useEffect(() => {
     fetchData();
+    // Obtener cantidad de usuarios
+    fetch('/api/auth', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (typeof data.count === 'number') {
+          setUserCount(data.count);
+        } else {
+          setUserCount(null);
+        }
+      })
+      .catch(() => setUserCount(null));
   }, [token]);
 
   const handleTransactionAdded = () => {
@@ -91,6 +106,11 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Platita Paisa</h1>
                 <p className="text-sm text-gray-600">¡Hola, {user.username}!</p>
+                {userCount !== null && (
+                  <span className="text-xs text-purple-600 font-semibold block mt-1">
+                    ¡Ya somos {userCount} parceros usando la plataforma!
+                  </span>
+                )}
               </div>
             </div>
             <button

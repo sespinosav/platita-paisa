@@ -1,3 +1,14 @@
+export async function GET() {
+  try {
+    const { data, error } = await supabase.from('users').select('id');
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ count: Array.isArray(data) ? data.length : 0 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { hashPassword, verifyPassword, generateToken } from '@/lib/auth';
