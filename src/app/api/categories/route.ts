@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { openDb } from '@/lib/database';
+import { supabase } from '@/lib/supabase';
 import { verifyToken } from '@/lib/auth';
 import { defaultCategories } from '@/lib/utils';
 
@@ -15,22 +15,28 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
   
-  const db = await openDb();
-  
   try {
     // Obtener categorías personalizadas del usuario
-    const userCategories = await db.all(
-      'SELECT category_name FROM user_categories WHERE user_id = ?',
-      payload.userId
-    );
+    const { data: userCategories, error: categoriesError } = await supabase
+      .from('user_categories')
+      .select('category_name')
+      .eq('user_id', payload.userId);
     
-    const userCategoryNames = userCategories.map(cat => cat.category_name);
+    if (categoriesError) {
+      console.error('Error fetching user categories:', categoriesError);
+      // Si hay error, solo devolver categorías por defecto
+      return NextResponse.json({ categories: defaultCategories });
+    }
+    
+    const userCategoryNames = userCategories?.map(cat => cat.category_name) || [];
     
     // Combinar categorías por defecto con las personalizadas
     const allCategories = [...new Set([...defaultCategories, ...userCategoryNames])];
     
     return NextResponse.json({ categories: allCategories });
-  } finally {
-    await db.close();
+    
+  } catch (error) {
+    console.error('Categories error:', error);
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

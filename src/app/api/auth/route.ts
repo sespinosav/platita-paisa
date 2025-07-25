@@ -1,22 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { openDb, initDb } from '@/lib/database';
+import { supabase } from '@/lib/supabase';
 import { hashPassword, verifyPassword, generateToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
-  await initDb();
-  
   const { username, password, action } = await request.json();
   
   if (!username || !password) {
     return NextResponse.json({ error: 'Username y password son requeridos' }, { status: 400 });
   }
   
-  const db = await openDb();
-  
   try {
     if (action === 'register') {
       // Verificar si el usuario ya existe
-      const existingUser = await db.get('SELECT id FROM users WHERE username = ?', username);
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('username', username)
+        .single();
       
       if (existingUser) {
         return NextResponse.json({ error: 'El usuario ya existe' }, { status: 400 });
@@ -24,25 +24,34 @@ export async function POST(request: NextRequest) {
       
       // Crear nuevo usuario
       const hashedPassword = await hashPassword(password);
-      const result = await db.run(
-        'INSERT INTO users (username, password) VALUES (?, ?)',
-        username,
-        hashedPassword
-      );
+      const { data: newUser, error: insertError } = await supabase
+        .from('users')
+        .insert([{ username, password: hashedPassword }])
+        .select()
+        .single();
       
-      const token = generateToken(result.lastID!);
+      if (insertError) {
+        console.error('Error creating user:', insertError);
+        return NextResponse.json({ error: 'Error creando usuario' }, { status: 500 });
+      }
+      
+      const token = generateToken(newUser.id);
       
       return NextResponse.json({
         success: true,
         token,
-        user: { id: result.lastID, username }
+        user: { id: newUser.id, username: newUser.username }
       });
       
     } else if (action === 'login') {
       // Verificar credenciales
-      const user = await db.get('SELECT * FROM users WHERE username = ?', username);
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', username)
+        .single();
       
-      if (!user || !(await verifyPassword(password, user.password))) {
+      if (userError || !user || !(await verifyPassword(password, user.password))) {
         return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 });
       }
       
@@ -57,7 +66,8 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({ error: 'Acción no válida' }, { status: 400 });
     
-  } finally {
-    await db.close();
+  } catch (error) {
+    console.error('Auth error:', error);
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

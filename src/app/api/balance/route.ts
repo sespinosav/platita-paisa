@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { openDb } from '@/lib/database';
+import { supabase } from '@/lib/supabase';
 import { verifyToken } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
@@ -14,43 +14,76 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
   
-  const db = await openDb();
-  
   try {
     // Calcular ingresos
-    const ingresos = await db.get(
-      'SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE user_id = ? AND type = "ingreso"',
-      payload.userId
-    );
+    const { data: ingresosData, error: ingresosError } = await supabase
+      .from('transactions')
+      .select('amount')
+      .eq('user_id', payload.userId)
+      .eq('type', 'ingreso');
+    
+    if (ingresosError) {
+      console.error('Error fetching ingresos:', ingresosError);
+      return NextResponse.json({ error: 'Error calculando ingresos' }, { status: 500 });
+    }
     
     // Calcular gastos
-    const gastos = await db.get(
-      'SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE user_id = ? AND type = "gasto"',
-      payload.userId
-    );
+    const { data: gastosData, error: gastosError } = await supabase
+      .from('transactions')
+      .select('amount')
+      .eq('user_id', payload.userId)
+      .eq('type', 'gasto');
     
-    // Obtener datos por categoría para la gráfica
-    const categoryData = await db.all(
-      `SELECT 
-         category,
-         type,
-         SUM(amount) as total
-       FROM transactions 
-       WHERE user_id = ? 
-       GROUP BY category, type`,
-      payload.userId
-    );
+    if (gastosError) {
+      console.error('Error fetching gastos:', gastosError);
+      return NextResponse.json({ error: 'Error calculando gastos' }, { status: 500 });
+    }
     
-    const balance = ingresos.total - gastos.total;
+    // Obtener datos por categoría usando RPC para GROUP BY
+    const { data: categoryData, error: categoryError } = await supabase
+      .rpc('get_category_totals', { user_id_param: payload.userId });
+    
+    // Si RPC no está disponible, usar una consulta alternativa
+    let categoryDataResult = categoryData;
+    if (categoryError) {
+      const { data: allTransactions, error: transError } = await supabase
+        .from('transactions')
+        .select('category, type, amount')
+        .eq('user_id', payload.userId);
+      
+      if (!transError) {
+        // Agrupar manualmente
+        const grouped = allTransactions.reduce((acc, transaction) => {
+          const key = `${transaction.category}-${transaction.type}`;
+          if (!acc[key]) {
+            acc[key] = {
+              category: transaction.category,
+              type: transaction.type,
+              total: 0
+            };
+          }
+          acc[key].total += parseFloat(transaction.amount);
+          return acc;
+        }, {});
+        
+        categoryDataResult = Object.values(grouped);
+      }
+    }
+    
+    // Calcular totales
+    const totalIngresos = ingresosData?.reduce((sum, item) => sum + parseFloat(item.amount), 0) || 0;
+    const totalGastos = gastosData?.reduce((sum, item) => sum + parseFloat(item.amount), 0) || 0;
+    const balance = totalIngresos - totalGastos;
     
     return NextResponse.json({
       balance,
-      ingresos: ingresos.total,
-      gastos: gastos.total,
-      categoryData
+      ingresos: totalIngresos,
+      gastos: totalGastos,
+      categoryData: categoryDataResult || []
     });
     
-  } finally {
-    await db.close();
+  } catch (error) {
+    console.error('Balance error:', error);
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
