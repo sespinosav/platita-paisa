@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { verifyToken } from '@/lib/auth';
 
+function getColombianDate(): Date {
+  const now = new Date();
+  // Restar 5 horas en milisegundos
+  const colombianTime = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+  return colombianTime;
+}
+
 function getDateRangeUTC(period: string) {
   // Usar tiempo colombiano para calcular rangos pero convertir a UTC para queries
-  const now = new Date();
+  const now = getColombianDate();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
-  // Offset de Colombia (UTC-5) - RESTAR para convertir a UTC
-  const COLOMBIA_OFFSET = 5 * 60 * 60 * 1000; // 5 horas en millisegundos
   
   switch (period) {
     case 'today':
@@ -18,8 +22,8 @@ function getDateRangeUTC(period: string) {
       
       // Convertir a UTC RESTANDO el offset (Colombia está UTC-5)
       return {
-        start: new Date(todayStart.getTime() - COLOMBIA_OFFSET).toISOString(),
-        end: new Date(todayEnd.getTime() - COLOMBIA_OFFSET).toISOString()
+        start: new Date(todayStart.getTime()).toISOString(),
+        end: new Date(todayEnd.getTime()).toISOString()
       };
     
     case 'week':
@@ -29,8 +33,8 @@ function getDateRangeUTC(period: string) {
       weekEnd.setDate(weekStart.getDate() + 7);
       
       return {
-        start: new Date(weekStart.getTime() - COLOMBIA_OFFSET).toISOString(),
-        end: new Date(weekEnd.getTime() - COLOMBIA_OFFSET).toISOString()
+        start: new Date(weekStart.getTime()).toISOString(),
+        end: new Date(weekEnd.getTime()).toISOString()
       };
     
     case 'month':
@@ -38,8 +42,8 @@ function getDateRangeUTC(period: string) {
       const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
       
       return {
-        start: new Date(monthStart.getTime() - COLOMBIA_OFFSET).toISOString(),
-        end: new Date(monthEnd.getTime() - COLOMBIA_OFFSET).toISOString()
+        start: new Date(monthStart.getTime()).toISOString(),
+        end: new Date(monthEnd.getTime()).toISOString()
       };
     
     case 'year':
@@ -47,8 +51,8 @@ function getDateRangeUTC(period: string) {
       const yearEnd = new Date(now.getFullYear() + 1, 0, 1);
       
       return {
-        start: new Date(yearStart.getTime() - COLOMBIA_OFFSET).toISOString(),
-        end: new Date(yearEnd.getTime() - COLOMBIA_OFFSET).toISOString()
+        start: new Date(yearStart.getTime()).toISOString(),
+        end: new Date(yearEnd.getTime()).toISOString()
       };
     
     default:
