@@ -1,57 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { verifyToken } from '@/lib/auth';
-import { toZonedTime } from 'date-fns-tz';
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 
 function getDateRangeUTC(period: string) {
-  // Usar tiempo colombiano para calcular rangos pero convertir a UTC para queries
   const timeZone = 'America/Bogota';
-  const now = toZonedTime(new Date(), timeZone);
-  // Fecha actual en Colombia
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const date = now.getDate();
+  
+  // Obtener la fecha/hora actual en Colombia
+  const nowInColombia = toZonedTime(new Date(), timeZone);
+  const year = nowInColombia.getFullYear();
+  const month = nowInColombia.getMonth();
+  const date = nowInColombia.getDate();
 
   switch (period) {
     case 'today': {
-      // Medianoche Colombia
-      const startCol = new Date(year, month, date, 0, 0, 0);
-      const endCol = new Date(year, month, date + 1, 0, 0, 0);
+      // Crear fechas en Colombia (medianoche a medianoche)
+      const startColombia = new Date(year, month, date, 0, 0, 0);
+      const endColombia = new Date(year, month, date + 1, 0, 0, 0);
+      
+      // Convertir a UTC para las queries de base de datos
       return {
-        start: startCol.toISOString(),
-        end: endCol.toISOString()
+        start: fromZonedTime(startColombia, timeZone).toISOString(),
+        end: fromZonedTime(endColombia, timeZone).toISOString()
       };
     }
     case 'week': {
-      // Primer día de la semana Colombia (domingo)
-      const dayOfWeek = now.getDay();
-      const startCol = new Date(year, month, date - dayOfWeek, 0, 0, 0);
-      const endCol = new Date(year, month, date - dayOfWeek + 7, 0, 0, 0);
+      // Primer día de la semana en Colombia (domingo)
+      const dayOfWeek = nowInColombia.getDay();
+      const startColombia = new Date(year, month, date - dayOfWeek, 0, 0, 0);
+      const endColombia = new Date(year, month, date - dayOfWeek + 7, 0, 0, 0);
+      
       return {
-        start: startCol.toISOString(),
-        end: endCol.toISOString()
+        start: fromZonedTime(startColombia, timeZone).toISOString(),
+        end: fromZonedTime(endColombia, timeZone).toISOString()
       };
     }
     case 'month': {
-      const startCol = new Date(year, month, 1, 0, 0, 0);
-      const endCol = new Date(year, month + 1, 1, 0, 0, 0);
+      const startColombia = new Date(year, month, 1, 0, 0, 0);
+      const endColombia = new Date(year, month + 1, 1, 0, 0, 0);
+      
       return {
-        start: startCol.toISOString(),
-        end: endCol.toISOString()
+        start: fromZonedTime(startColombia, timeZone).toISOString(),
+        end: fromZonedTime(endColombia, timeZone).toISOString()
       };
     }
     case 'year': {
-      const startCol = new Date(year, 0, 1, 0, 0, 0);
-      const endCol = new Date(year + 1, 0, 1, 0, 0, 0);
+      const startColombia = new Date(year, 0, 1, 0, 0, 0);
+      const endColombia = new Date(year + 1, 0, 1, 0, 0, 0);
+      
       return {
-        start: startCol.toISOString(),
-        end: endCol.toISOString()
+        start: fromZonedTime(startColombia, timeZone).toISOString(),
+        end: fromZonedTime(endColombia, timeZone).toISOString()
       };
     }
     default:
+      // Desde el 1 de enero de 2020 Colombia hasta mañana Colombia
+      const defaultStartColombia = new Date(2020, 0, 1, 0, 0, 0);
+      const tomorrowColombia = new Date(year, month, date + 1, 23, 59, 59);
+      
       return {
-        start: '2019-12-31T19:00:00.000Z', // Equivale a 2020-01-01 00:00 Colombia
-        end: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+        start: fromZonedTime(defaultStartColombia, timeZone).toISOString(),
+        end: fromZonedTime(tomorrowColombia, timeZone).toISOString()
       };
   }
 }
