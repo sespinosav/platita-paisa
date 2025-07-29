@@ -9,10 +9,13 @@ function getColombianDate() {
   return colombianTime;
 }
 
-function getDateRange(period: string) {
-  // Usar tiempo colombiano en lugar de UTC
+function getDateRangeUTC(period: string) {
+  // Usar tiempo colombiano para calcular rangos pero convertir a UTC para queries
   const now = getColombianDate();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  // Offset de Colombia (UTC-5) - RESTAR para convertir a UTC
+  const COLOMBIA_OFFSET = 5 * 60 * 60 * 1000; // 5 horas en millisegundos
   
   switch (period) {
     case 'today':
@@ -20,9 +23,10 @@ function getDateRange(period: string) {
       const todayEnd = new Date(today);
       todayEnd.setDate(today.getDate() + 1);
       
+      // Convertir a UTC RESTANDO el offset (Colombia está UTC-5)
       return {
-        start: todayStart.toISOString(),
-        end: todayEnd.toISOString()
+        start: new Date(todayStart.getTime() - COLOMBIA_OFFSET).toISOString(),
+        end: new Date(todayEnd.getTime() - COLOMBIA_OFFSET).toISOString()
       };
     
     case 'week':
@@ -30,30 +34,33 @@ function getDateRange(period: string) {
       weekStart.setDate(today.getDate() - today.getDay());
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 7);
+      
       return {
-        start: weekStart.toISOString(),
-        end: weekEnd.toISOString()
+        start: new Date(weekStart.getTime() - COLOMBIA_OFFSET).toISOString(),
+        end: new Date(weekEnd.getTime() - COLOMBIA_OFFSET).toISOString()
       };
     
     case 'month':
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      
       return {
-        start: monthStart.toISOString(),
-        end: monthEnd.toISOString()
+        start: new Date(monthStart.getTime() - COLOMBIA_OFFSET).toISOString(),
+        end: new Date(monthEnd.getTime() - COLOMBIA_OFFSET).toISOString()
       };
     
     case 'year':
       const yearStart = new Date(now.getFullYear(), 0, 1);
       const yearEnd = new Date(now.getFullYear() + 1, 0, 1);
+      
       return {
-        start: yearStart.toISOString(),
-        end: yearEnd.toISOString()
+        start: new Date(yearStart.getTime() - COLOMBIA_OFFSET).toISOString(),
+        end: new Date(yearEnd.getTime() - COLOMBIA_OFFSET).toISOString()
       };
     
     default:
       return {
-        start: '2020-01-01T00:00:00.000Z',
+        start: '2019-12-31T19:00:00.000Z', // Equivale a 2020-01-01 00:00 Colombia
         end: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
       };
   }
@@ -74,7 +81,7 @@ export async function GET(request: NextRequest) {
   // Obtener el período del query parameter
   const { searchParams } = new URL(request.url);
   const period = searchParams.get('period') || 'today';
-  const dateRange = getDateRange(period);
+  const dateRange = getDateRangeUTC(period);
   
   try {
     let query = supabase
@@ -148,7 +155,7 @@ export async function POST(request: NextRequest) {
       // Continuar aunque falle guardar la categoría
     }
     
-    // Crear la transacción
+    // Crear la transacción (created_at se guardará automáticamente en UTC)
     const { data: newTransaction, error: transactionError } = await supabase
       .from('transactions')
       .insert([{
