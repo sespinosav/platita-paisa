@@ -1,60 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { verifyToken } from '@/lib/auth';
-
-function getColombianDate(): Date {
-  const now = new Date();
-  // Restar 5 horas en milisegundos
-  const colombianTime = new Date(now.getTime() - 5 * 60 * 60 * 1000);
-  return colombianTime;
-}
+import { toZonedTime } from 'date-fns-tz';
 
 function getDateRangeUTC(period: string) {
   // Usar tiempo colombiano para calcular rangos pero convertir a UTC para queries
-  const now = getColombianDate();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
+  const timeZone = 'America/Bogota';
+  const now = toZonedTime(new Date(), timeZone);
+  // Fecha actual en Colombia
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const date = now.getDate();
+
   switch (period) {
-    case 'today':
-      const todayStart = new Date(today);
-      const todayEnd = new Date(today);
-      todayEnd.setDate(today.getDate() + 1);
-      
-      // Convertir a UTC RESTANDO el offset (Colombia está UTC-5)
+    case 'today': {
+      // Medianoche Colombia
+      const startCol = new Date(year, month, date, 0, 0, 0);
+      const endCol = new Date(year, month, date + 1, 0, 0, 0);
       return {
-        start: new Date(todayStart.getTime()).toISOString(),
-        end: new Date(todayEnd.getTime()).toISOString()
+        start: startCol.toISOString(),
+        end: endCol.toISOString()
       };
-    
-    case 'week':
-      const weekStart = new Date(today);
-      weekStart.setDate(today.getDate() - today.getDay());
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 7);
-      
+    }
+    case 'week': {
+      // Primer día de la semana Colombia (domingo)
+      const dayOfWeek = now.getDay();
+      const startCol = new Date(year, month, date - dayOfWeek, 0, 0, 0);
+      const endCol = new Date(year, month, date - dayOfWeek + 7, 0, 0, 0);
       return {
-        start: new Date(weekStart.getTime()).toISOString(),
-        end: new Date(weekEnd.getTime()).toISOString()
+        start: startCol.toISOString(),
+        end: endCol.toISOString()
       };
-    
-    case 'month':
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-      
+    }
+    case 'month': {
+      const startCol = new Date(year, month, 1, 0, 0, 0);
+      const endCol = new Date(year, month + 1, 1, 0, 0, 0);
       return {
-        start: new Date(monthStart.getTime()).toISOString(),
-        end: new Date(monthEnd.getTime()).toISOString()
+        start: startCol.toISOString(),
+        end: endCol.toISOString()
       };
-    
-    case 'year':
-      const yearStart = new Date(now.getFullYear(), 0, 1);
-      const yearEnd = new Date(now.getFullYear() + 1, 0, 1);
-      
+    }
+    case 'year': {
+      const startCol = new Date(year, 0, 1, 0, 0, 0);
+      const endCol = new Date(year + 1, 0, 1, 0, 0, 0);
       return {
-        start: new Date(yearStart.getTime()).toISOString(),
-        end: new Date(yearEnd.getTime()).toISOString()
+        start: startCol.toISOString(),
+        end: endCol.toISOString()
       };
-    
+    }
     default:
       return {
         start: '2019-12-31T19:00:00.000Z', // Equivale a 2020-01-01 00:00 Colombia
@@ -62,7 +55,6 @@ function getDateRangeUTC(period: string) {
       };
   }
 }
-
 export async function GET(request: NextRequest) {
   const token = request.headers.get('authorization')?.replace('Bearer ', '');
   
