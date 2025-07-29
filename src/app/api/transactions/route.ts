@@ -2,15 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { verifyToken } from '@/lib/auth';
 
-function getDateRange(period: string) {
+function getColombianDate() {
+  // Crear fecha en zona horaria de Colombia (UTC-5)
   const now = new Date();
+  const colombianTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Bogota"}));
+  return colombianTime;
+}
+
+function getDateRange(period: string) {
+  // Usar tiempo colombiano en lugar de UTC
+  const now = getColombianDate();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   
   switch (period) {
     case 'today':
+      const todayStart = new Date(today);
+      const todayEnd = new Date(today);
+      todayEnd.setDate(today.getDate() + 1);
+      
       return {
-        start: today.toISOString(),
-        end: new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString()
+        start: todayStart.toISOString(),
+        end: todayEnd.toISOString()
       };
     
     case 'week':
@@ -40,8 +52,10 @@ function getDateRange(period: string) {
       };
     
     default:
-      // Por defecto retorna las últimas 50 transacciones sin filtro de fecha
-      return null;
+      return {
+        start: '2020-01-01T00:00:00.000Z',
+        end: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      };
   }
 }
 
