@@ -2,6 +2,49 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { verifyToken } from '@/lib/auth';
 
+function getDateRange(period: string) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  switch (period) {
+    case 'today':
+      return {
+        start: today.toISOString(),
+        end: new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString()
+      };
+    
+    case 'week':
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - today.getDay());
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 7);
+      return {
+        start: weekStart.toISOString(),
+        end: weekEnd.toISOString()
+      };
+    
+    case 'month':
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      return {
+        start: monthStart.toISOString(),
+        end: monthEnd.toISOString()
+      };
+    
+    case 'year':
+      const yearStart = new Date(now.getFullYear(), 0, 1);
+      const yearEnd = new Date(now.getFullYear() + 1, 0, 1);
+      return {
+        start: yearStart.toISOString(),
+        end: yearEnd.toISOString()
+      };
+    
+    default:
+      // Por defecto retorna las últimas 50 transacciones sin filtro de fecha
+      return null;
+  }
+}
+
 export async function GET(request: NextRequest) {
   const token = request.headers.get('authorization')?.replace('Bearer ', '');
   
@@ -14,20 +57,41 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
   
+  // Obtener el período del query parameter
+  const { searchParams } = new URL(request.url);
+  const period = searchParams.get('period') || 'today';
+  const dateRange = getDateRange(period);
+  
   try {
-    const { data: transactions, error: transactionsError } = await supabase
+    let query = supabase
       .from('transactions')
       .select('*')
       .eq('user_id', payload.userId)
-      .order('created_at', { ascending: false })
-      .limit(10);
+      .order('created_at', { ascending: false });
+    
+    // Aplicar filtro de fecha si existe
+    if (dateRange) {
+      query = query
+        .gte('created_at', dateRange.start)
+        .lt('created_at', dateRange.end);
+    } else {
+      // Si no hay filtro de fecha, limitar a las últimas 50 transacciones
+      query = query.limit(50);
+    }
+    
+    const { data: transactions, error: transactionsError } = await query;
     
     if (transactionsError) {
       console.error('Error fetching transactions:', transactionsError);
       return NextResponse.json({ error: 'Error obteniendo transacciones' }, { status: 500 });
     }
     
-    return NextResponse.json({ transactions: transactions || [] });
+    return NextResponse.json({ 
+      transactions: transactions || [],
+      period: period,
+      dateRange: dateRange,
+      count: transactions?.length || 0
+    });
     
   } catch (error) {
     console.error('Transactions GET error:', error);
@@ -95,7 +159,8 @@ export async function POST(request: NextRequest) {
         type: newTransaction.type,
         amount: newTransaction.amount,
         category: newTransaction.category,
-        description: newTransaction.description
+        description: newTransaction.description,
+        created_at: newTransaction.created_at
       }
     });
     
@@ -115,13 +180,14 @@ export async function DELETE(request: NextRequest) {
   if (!payload) {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 });
   }
-
+  
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
+  
   if (!id) {
     return NextResponse.json({ error: 'ID requerido' }, { status: 400 });
   }
-
+  
   try {
     // Verificar que la transacción pertenezca al usuario y eliminarla
     const { data: deletedTransaction, error: deleteError } = await supabase

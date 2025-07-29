@@ -1,7 +1,6 @@
 'use client';
-
 import { useState, useEffect } from 'react';
-import { LogOut, Wallet, TrendingUp, TrendingDown, Sparkles } from 'lucide-react';
+import { LogOut, Wallet, TrendingUp, TrendingDown, Sparkles, Calendar, Filter } from 'lucide-react';
 import TransactionForm from '@/components/TransactionForm';
 import TransactionHistory from '@/components/TransactionHistory';
 import CategoryChart from '@/components/CategoryChart';
@@ -21,8 +20,19 @@ interface BalanceData {
   categoryData: any[];
 }
 
+type FilterPeriod = 'today' | 'week' | 'month' | 'year';
+
 export default function Dashboard({ token, user, onLogout }: DashboardProps) {
   const [userCount, setUserCount] = useState<number | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<FilterPeriod>('today');
+  
+  const filterOptions = [
+    { value: 'today' as FilterPeriod, label: 'Hoy', icon: '🔥' },
+    { value: 'week' as FilterPeriod, label: 'Semana', icon: '🌀' },
+    { value: 'month' as FilterPeriod, label: 'Mes', icon: '🗓️' },
+    { value: 'year' as FilterPeriod, label: 'Año', icon: '🏆' }
+  ];
+
   const tips = [
     "Pana, recordá que cada pesito cuenta. ¡Ahorrar de a poquito también suma!",
     "No gastés en lo que no necesitás, así te rinde más la platica.",
@@ -33,6 +43,7 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
     "Ahorrá para los imprevistos, nunca se sabe cuándo toca apretarse el cinturón."
   ];
   const todayTip = tips[new Date().getDay()];
+
   const [balanceData, setBalanceData] = useState<BalanceData>({
     balance: 0,
     ingresos: 0,
@@ -42,13 +53,13 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = async () => {
+  const fetchData = async (period: FilterPeriod = selectedPeriod) => {
     try {
       const [balanceResponse, transactionsResponse] = await Promise.all([
-        fetch('/api/balance', {
+        fetch(`/api/balance?period=${period}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch('/api/transactions', {
+        fetch(`/api/transactions?period=${period}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);
@@ -64,7 +75,6 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
       setLoading(false);
     }
   };
-
 
   useEffect(() => {
     fetchData();
@@ -83,8 +93,22 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
       .catch(() => setUserCount(null));
   }, [token]);
 
+  useEffect(() => {
+    fetchData(selectedPeriod);
+  }, [selectedPeriod]);
+
   const handleTransactionAdded = () => {
     fetchData();
+  };
+
+  const handlePeriodChange = (period: FilterPeriod) => {
+    setSelectedPeriod(period);
+    setLoading(true);
+  };
+
+  const getPeriodLabel = () => {
+    const option = filterOptions.find(opt => opt.value === selectedPeriod);
+    return option ? option.label : 'Hoy';
   };
 
   if (loading) {
@@ -125,38 +149,85 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Filtros de Período */}
+        <div className="mb-8">
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <Filter className="w-5 h-5 text-blue-600" />
+                <h2 className="text-lg font-semibold text-gray-800">Filtrar por período</h2>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <Calendar className="w-4 h-4" />
+                <span>Mostrando datos de: <strong>{getPeriodLabel()}</strong></span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {filterOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => handlePeriodChange(option.value)}
+                  className={`
+                    relative flex items-center justify-center space-x-2 p-3 rounded-lg font-medium transition-all duration-200
+                    ${selectedPeriod === option.value
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform scale-105'
+                      : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md'
+                    }
+                  `}
+                >
+                  <span className="text-lg">{option.icon}</span>
+                  <span className="font-semibold">{option.label}</span>
+                  {selectedPeriod === option.value && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Balance Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-gradient-to-r from-green-400 to-blue-500 rounded-xl shadow-lg p-6 text-white">
+          <div className="bg-gradient-to-r from-green-400 to-blue-500 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-transform">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-green-100 text-sm font-medium">Balance Total</p>
                 <p className="text-3xl font-bold">
                   {formatCurrency(balanceData.balance)}
                 </p>
+                <p className="text-xs text-green-100 mt-1">
+                  Período: {getPeriodLabel()}
+                </p>
               </div>
               <Wallet className="w-10 h-10 text-green-100" />
             </div>
           </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6">
+          
+          <div className="bg-white rounded-xl shadow-lg p-6 transform hover:scale-105 transition-transform">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm font-medium">Ingresos</p>
                 <p className="text-2xl font-bold text-green-600">
                   {formatCurrency(balanceData.ingresos)}
                 </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {getPeriodLabel()}
+                </p>
               </div>
               <TrendingUp className="w-8 h-8 text-green-500" />
             </div>
           </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6">
+          
+          <div className="bg-white rounded-xl shadow-lg p-6 transform hover:scale-105 transition-transform">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-600 text-sm font-medium">Gastos</p>
                 <p className="text-2xl font-bold text-red-600">
                   {formatCurrency(balanceData.gastos)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {getPeriodLabel()}
                 </p>
               </div>
               <TrendingDown className="w-8 h-8 text-red-500" />
@@ -176,12 +247,16 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
               transactions={transactions} 
               token={token} 
               onTransactionDeleted={fetchData} 
+              filterPeriod={selectedPeriod}
             />
           </div>
-
+          
           {/* Gráfica de categorías */}
           <div>
-            <CategoryChart categoryData={balanceData.categoryData} />
+            <CategoryChart 
+              categoryData={balanceData.categoryData} 
+              period={getPeriodLabel()}
+            />
           </div>
         </div>
 
