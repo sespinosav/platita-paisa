@@ -1,60 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { verifyToken } from '@/lib/auth';
-import { toZonedTime } from 'date-fns-tz';
+import { getDateRangeUTC } from '@/app/utils/timeZone';
 
-function getDateRangeUTC(period: string) {
-  // Usar tiempo colombiano para calcular rangos pero convertir a UTC para queries
-  const timeZone = 'America/Bogota';
-  const now = toZonedTime(new Date(), timeZone);
-  // Fecha actual en Colombia
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const date = now.getDate();
-
-  switch (period) {
-    case 'today': {
-      // Medianoche Colombia
-      const startCol = new Date(year, month, date, 0, 0, 0);
-      const endCol = new Date(year, month, date + 1, 0, 0, 0);
-      return {
-        start: startCol.toISOString(),
-        end: endCol.toISOString()
-      };
-    }
-    case 'week': {
-      // Primer día de la semana Colombia (domingo)
-      const dayOfWeek = now.getDay();
-      const startCol = new Date(year, month, date - dayOfWeek, 0, 0, 0);
-      const endCol = new Date(year, month, date - dayOfWeek + 7, 0, 0, 0);
-      return {
-        start: startCol.toISOString(),
-        end: endCol.toISOString()
-      };
-    }
-    case 'month': {
-      const startCol = new Date(year, month, 1, 0, 0, 0);
-      const endCol = new Date(year, month + 1, 1, 0, 0, 0);
-      return {
-        start: startCol.toISOString(),
-        end: endCol.toISOString()
-      };
-    }
-    case 'year': {
-      const startCol = new Date(year, 0, 1, 0, 0, 0);
-      const endCol = new Date(year + 1, 0, 1, 0, 0, 0);
-      return {
-        start: startCol.toISOString(),
-        end: endCol.toISOString()
-      };
-    }
-    default:
-      return {
-        start: '2019-12-31T19:00:00.000Z', // Equivale a 2020-01-01 00:00 Colombia
-        end: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-      };
-  }
-}
 export async function GET(request: NextRequest) {
   const token = request.headers.get('authorization')?.replace('Bearer ', '');
   
