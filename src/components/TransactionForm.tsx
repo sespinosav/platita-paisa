@@ -197,7 +197,7 @@ export default function TransactionForm({ token, onTransactionAdded }: Transacti
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center space-x-2 hover:from-blue-600 hover:to-purple-700 transition-all duration-200 disabled:opacity-50"
+          className="cursor-pointer w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center space-x-2 hover:from-blue-600 hover:to-purple-700 transition-all duration-200 disabled:opacity-50"
         >
           {loading ? (
             <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>

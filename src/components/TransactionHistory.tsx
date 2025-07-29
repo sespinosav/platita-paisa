@@ -15,14 +15,15 @@ function formatDateInColombianTime(utcDateString: string | null): string {
   if (!utcDateString) return '';
   
   try {
-    // Crear fecha desde UTC
-    const utcDate = new Date(utcDateString ?? '');
-    if (isNaN(utcDate.getTime())) {
-      return '';
-    }
-    // Usar toLocaleString para asegurar conversión a hora colombiana
-    return utcDate.toLocaleString('es-CO', {
-      timeZone: 'UTC',
+    // Asegurar que la cadena se interprete como UTC (agrega 'Z' si falta)
+    const safeUtcString = utcDateString.endsWith('Z') ? utcDateString : utcDateString + 'Z';
+    const utcDate = new Date(safeUtcString);
+
+    if (isNaN(utcDate.getTime())) return '';
+
+    // Formatear en hora colombiana (UTC-5)
+    return utcDate.toLocaleString("es-CO", {
+      timeZone: 'America/Bogota',
       year: '2-digit',
       month: '2-digit',
       day: '2-digit',
@@ -30,6 +31,7 @@ function formatDateInColombianTime(utcDateString: string | null): string {
       minute: '2-digit',
       hour12: true
     });
+
   } catch (error) {
     console.error('Error formatting date:', error);
     return '';
@@ -111,7 +113,7 @@ export default function TransactionHistory({ transactions, onTransactionDeleted,
             </div>
             <button
               onClick={() => handleDelete(tx.id)}
-              className="ml-4 px-3 py-1 text-xs text-red-600 border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-colors flex-shrink-0"
+              className="cursor-pointer ml-4 px-3 py-1 text-xs text-red-600 border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-colors flex-shrink-0"
               title="Eliminar transacción"
             >
               Eliminar

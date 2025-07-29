@@ -2,16 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { verifyToken } from '@/lib/auth';
 
-function getColombianDate() {
-  // Crear fecha en zona horaria de Colombia (UTC-5)
-  const now = new Date();
-  const colombianTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Bogota"}));
-  return colombianTime;
-}
-
 function getDateRangeUTC(period: string) {
   // Usar tiempo colombiano para calcular rangos pero convertir a UTC para queries
-  const now = getColombianDate();
+  const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   
   // Offset de Colombia (UTC-5) - RESTAR para convertir a UTC
