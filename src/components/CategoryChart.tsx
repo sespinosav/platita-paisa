@@ -43,7 +43,7 @@ export default function CategoryChart({ categoryData }: CategoryChartProps) {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-semibold">{payload[0].name}</p>
+          <p className="text-gray-700 font-semibold">{payload[0].name}</p>
           <p className="text-blue-600">
             {formatCurrency(payload[0].value)}
           </p>
