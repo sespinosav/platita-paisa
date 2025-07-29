@@ -169,7 +169,7 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
                   key={option.value}
                   onClick={() => handlePeriodChange(option.value)}
                   className={`
-                    relative flex items-center justify-center space-x-2 p-3 rounded-lg font-medium transition-all duration-200
+                    cursor-pointer relative flex items-center justify-center space-x-2 p-3 rounded-lg font-medium transition-all duration-200
                     ${selectedPeriod === option.value
                       ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform scale-105'
                       : 'bg-gray-50 text-gray-700 hover:bg-gray-100 hover:shadow-md'

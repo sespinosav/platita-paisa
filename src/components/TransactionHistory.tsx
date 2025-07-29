@@ -48,6 +48,9 @@ export default function TransactionHistory({ transactions, onTransactionDeleted,
                 <p className="text-sm text-gray-600">
                   {formatCurrency(tx.amount)}
                 </p>
+                <p className="text-xs text-gray-400">
+                  {tx.created_at ? new Date(tx.created_at).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : ''}
+                </p>
               </div>
             </div>
             <button
