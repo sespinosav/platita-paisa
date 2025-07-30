@@ -62,6 +62,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                 type="text"
                 placeholder="Usuario"
                 value={username}
+                minLength={3}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 placeholder-gray-500"
                 required
@@ -90,7 +91,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center space-x-2 hover:from-blue-600 hover:to-purple-700 transition-all duration-200 disabled:opacity-50"
+            className="cursor-pointer w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center space-x-2 hover:from-blue-600 hover:to-purple-700 transition-all duration-200 disabled:opacity-50"
           >
             {loading ? (
               <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
@@ -102,7 +103,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
             )}
           </button>
 
-          <div className="text-center">
+          <div className="cursor-pointer text-center">
             <button
               type="button"
               onClick={() => setIsLogin(!isLogin)}

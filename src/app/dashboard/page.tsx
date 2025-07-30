@@ -1,11 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { LogOut, Wallet, TrendingUp, TrendingDown, Sparkles, Calendar, Filter } from 'lucide-react';
+import { LogOut, Wallet, TrendingUp, TrendingDown, Sparkles, Calendar, Filter, Users } from 'lucide-react';
 import TransactionForm from '@/components/TransactionForm';
 import TransactionHistory from '@/components/TransactionHistory';
 import CategoryChart from '@/components/CategoryChart';
 import { formatCurrency } from '@/lib/utils';
 import type { Transaction } from '@/lib/utils';
+import { GoTrueAdminApi } from '@supabase/supabase-js';
+import GoToSharedAccountsButton from '@/components/GoToSharedAccountsButton';
 
 interface DashboardProps {
   token: string;
@@ -25,7 +27,7 @@ type FilterPeriod = 'today' | 'week' | 'month' | 'year';
 export default function Dashboard({ token, user, onLogout }: DashboardProps) {
   const [userCount, setUserCount] = useState<number | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<FilterPeriod>('today');
-  
+
   const filterOptions = [
     { value: 'today' as FilterPeriod, label: 'Hoy', icon: '🔥' },
     { value: 'week' as FilterPeriod, label: 'Semana', icon: '🌀' },
@@ -124,7 +126,43 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
+          {/* Mobile Header */}
+          <div className="flex flex-col space-y-3 py-4 sm:hidden">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Sparkles className="w-7 h-7 text-yellow-500" />
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">Platita Paisa</h1>
+                  <p className="text-sm text-gray-600">¡Hola, {user.username}!</p>
+                </div>
+              </div>
+              <button
+                onClick={onLogout}
+                className="cursor-pointer p-2 text-gray-700 hover:text-red-600 transition-colors"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Mobile Info and Actions */}
+            <div className="flex flex-col space-y-2">
+              {userCount !== null && (
+                <span className="text-xs text-purple-600 font-semibold text-center">
+                  ¡Ya somos {userCount} parceros!
+                </span>
+              )}
+              <a
+                href="/shared-accounts"
+                className="cursor-pointer inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-3 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg text-sm font-medium w-full"
+              >
+                <Users className="w-4 h-4" />
+                <span>El Parche 🎉</span>
+              </a>
+            </div>
+          </div>
+
+          {/* Desktop Header */}
+          <div className="hidden sm:flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
               <Sparkles className="w-8 h-8 text-yellow-500" />
               <div>
@@ -137,13 +175,23 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
                 )}
               </div>
             </div>
-            <button
-              onClick={onLogout}
-              className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-red-600 transition-colors"
-            >
-              <LogOut className="w-5 h-5" />
-              <span>Salir</span>
-            </button>
+            
+            <div className="flex items-center space-x-4">
+              <a
+                href="/shared-accounts"
+                className="cursor-pointer inline-flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg font-medium"
+              >
+                <Users className="w-5 h-5" />
+                <span>El Parche 🎉</span>
+              </a>
+              <button
+                onClick={onLogout}
+                className="cursor-pointer flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-red-600 transition-colors"
+              >
+                <LogOut className="w-5 h-5" />
+                <span>Salir</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -162,7 +210,7 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
                 <span>Mostrando datos de: <strong>{getPeriodLabel()}</strong></span>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {filterOptions.map((option) => (
                 <button
@@ -203,7 +251,7 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
               <Wallet className="w-10 h-10 text-green-100" />
             </div>
           </div>
-          
+
           <div className="bg-white rounded-xl shadow-lg p-6 transform hover:scale-105 transition-transform">
             <div className="flex items-center justify-between">
               <div>
@@ -218,7 +266,7 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
               <TrendingUp className="w-8 h-8 text-green-500" />
             </div>
           </div>
-          
+
           <div className="bg-white rounded-xl shadow-lg p-6 transform hover:scale-105 transition-transform">
             <div className="flex items-center justify-between">
               <div>
@@ -238,24 +286,23 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Formulario de transacciones */}
           <div className="space-y-8">
-            <TransactionForm 
-              token={token} 
-              onTransactionAdded={handleTransactionAdded} 
+            <TransactionForm
+              token={token}
+              onTransactionAdded={handleTransactionAdded}
             />
-            
-            <TransactionHistory 
-              transactions={transactions} 
-              token={token} 
-              onTransactionDeleted={fetchData} 
+
+            <TransactionHistory
+              transactions={transactions}
+              token={token}
+              onTransactionDeleted={fetchData}
               filterPeriod={selectedPeriod}
             />
           </div>
-          
+
           {/* Gráfica de categorías */}
           <div>
-            <CategoryChart 
-              categoryData={balanceData.categoryData} 
-              period={getPeriodLabel()}
+            <CategoryChart
+              categoryData={balanceData.categoryData}
             />
           </div>
         </div>
@@ -276,6 +323,8 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
             </div>
           </div>
         </div>
+
+        <GoToSharedAccountsButton />
       </main>
     </div>
   );
