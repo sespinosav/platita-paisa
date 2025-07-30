@@ -83,5 +83,35 @@ CREATE INDEX IF NOT EXISTS idx_shared_account_participants_account ON shared_acc
 CREATE INDEX IF NOT EXISTS idx_shared_account_participants_user ON shared_account_participants (user_id);
 CREATE INDEX IF NOT EXISTS idx_shared_transactions_account ON shared_transactions (shared_account_id);
 CREATE INDEX IF NOT EXISTS idx_shared_transactions_user ON shared_transactions (added_by_user_id);
+
+-- Migración: Agregar shared_account_id a transactions
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name='transactions' AND column_name='shared_account_id'
+    ) THEN
+        ALTER TABLE transactions ADD COLUMN shared_account_id INTEGER NULL;
+        ALTER TABLE transactions ADD CONSTRAINT fk_transactions_shared_account 
+            FOREIGN KEY (shared_account_id) REFERENCES shared_accounts (id);
+    END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_shared_transaction_payers_transaction ON shared_transaction_payers (shared_transaction_id);
 CREATE INDEX IF NOT EXISTS idx_shared_transaction_payers_participant ON shared_transaction_payers (participant_id);
+
+-- Agregar campo shared_account_id a la tabla transactions existente
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS shared_account_id INTEGER NULL;
+
+-- Agregar constraint solo si no existe
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE constraint_name = 'fk_transactions_shared_account' 
+        AND table_name = 'transactions'
+    ) THEN
+        ALTER TABLE transactions ADD CONSTRAINT fk_transactions_shared_account 
+            FOREIGN KEY (shared_account_id) REFERENCES shared_accounts (id);
+    END IF;
+END $$;

@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     // Obtener datos por categoría con filtro de fecha
     const { data: allTransactions, error: transError } = await supabase
       .from('transactions')
-      .select('category, type, amount')
+      .select('category, type, amount, shared_account_id')
       .eq('user_id', payload.userId)
       .gte('created_at', start)
       .lt('created_at', end);
@@ -79,12 +79,19 @@ export async function GET(request: NextRequest) {
     // Calcular totales
     const totalIngresos = ingresosData?.reduce((sum, item) => sum + parseFloat(item.amount), 0) || 0;
     const totalGastos = gastosData?.reduce((sum, item) => sum + parseFloat(item.amount), 0) || 0;
+    
+    // Calcular gastos específicos de parches compartidos usando shared_account_id
+    const sharedAccountExpenses = allTransactions
+      ?.filter(t => t.type === 'gasto' && t.shared_account_id !== null)
+      ?.reduce((sum, t) => sum + parseFloat(t.amount), 0) || 0;
+    
     const balance = totalIngresos - totalGastos;
     
     return NextResponse.json({
       balance,
       ingresos: totalIngresos,
       gastos: totalGastos,
+      sharedAccountExpenses, // Nuevo campo para gastos de parches
       categoryData: categoryDataResult,
       period: period,
       dateRange: { start, end }

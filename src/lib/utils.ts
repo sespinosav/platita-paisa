@@ -25,6 +25,7 @@ export interface Transaction {
   category: string;
   description?: string;
   created_at: string;
+  isFromSharedAccount?: boolean;
 }
 
 export interface User {

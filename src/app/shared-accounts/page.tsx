@@ -1,8 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Users, Calendar, DollarSign, Eye, Lock, Unlock, Trash2 } from 'lucide-react';
 import CreateSharedAccountModal from '@/components/CreateSharedAccountModal';
-import SharedAccountDetails from '@/components/SharedAccountDetails';
+import ConfirmModal from '@/components/ConfirmModal';
 import { formatCurrency } from '@/lib/utils';
 
 interface SharedAccount {
@@ -14,14 +15,16 @@ interface SharedAccount {
     created_at: string;
     closed_at: string | null;
     participants_count: number;
-    total_amount: number;
+    balance: number;
     creator_username: string;
 }
 
 export default function ElParche() {
+    const router = useRouter();
     const [token, setToken] = useState<string | null>(null);
     const [user, setUser] = useState<any | null>(null);
     const [authChecked, setAuthChecked] = useState(false);
+    
     useEffect(() => {
         if (typeof window !== 'undefined') {
             setToken(localStorage.getItem('platita-token'));
@@ -29,11 +32,12 @@ export default function ElParche() {
             setAuthChecked(true);
         }
     }, []);
+    
     if (authChecked && (!token || !user)) {
         return (<>
             <div className="text-center text-red-500">Por favor, inicia sesión para ver tus parches.</div>
             <button
-                onClick={() => window.location.href = '/'}
+                onClick={() => router.push('/')}
                 className='bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors'
             >
                 Iniciar sesión
@@ -41,11 +45,13 @@ export default function ElParche() {
         </>
         );
     }
+    
     const [sharedAccounts, setSharedAccounts] = useState<SharedAccount[]>([]);
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
-    const router = require('next/navigation').useRouter();
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [accountToDelete, setAccountToDelete] = useState<number | null>(null);
+    
     const handleBack = () => router.push('/');
 
     const fetchSharedAccounts = async () => {
@@ -72,15 +78,19 @@ export default function ElParche() {
         fetchSharedAccounts();
     };
 
-    const handleAccountUpdated = () => {
-        fetchSharedAccounts();
+    const handleViewAccount = (accountId: number) => {
+        router.push(`/shared-accounts/${accountId}`);
     };
 
     const handleDeleteAccount = async (accountId: number) => {
-        if (!token) return;
-        if (!confirm('¿Estás seguro de que quieres eliminar este parche? Toda la información asociada se eliminará permanentemente.')) return;
+        setAccountToDelete(accountId);
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDeleteAccount = async () => {
+        if (!token || !accountToDelete) return;
         try {
-            const response = await fetch(`/api/shared-accounts/${accountId}`, {
+            const response = await fetch(`/api/shared-accounts/${accountToDelete}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -92,20 +102,10 @@ export default function ElParche() {
             }
         } catch (error) {
             alert('Error eliminando el parche');
+        } finally {
+            setAccountToDelete(null);
         }
     };
-
-    if (selectedAccountId) {
-        return (
-            <SharedAccountDetails
-                accountId={selectedAccountId}
-                token={token || ''}
-                user={user}
-                onBack={() => setSelectedAccountId(null)}
-                onAccountUpdated={handleAccountUpdated}
-            />
-        );
-    }
 
     if (loading) {
         return (
@@ -208,7 +208,7 @@ export default function ElParche() {
                             <div
                                 key={account.id}
                                 className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer transform hover:scale-105"
-                                onClick={() => setSelectedAccountId(account.id)}
+                                onClick={() => handleViewAccount(account.id)}
                             >
                                 <div className="p-4 sm:p-6">
                                     <div className="flex items-start justify-between mb-4">
@@ -261,7 +261,7 @@ export default function ElParche() {
                                             <div className="flex items-center space-x-2">
                                                 <DollarSign className="w-4 h-4 text-green-600 flex-shrink-0" />
                                                 <span className="text-sm font-medium text-gray-900">
-                                                    Total: {formatCurrency(account.total_amount)}
+                                                    Balance: {formatCurrency(account.balance)}
                                                 </span>
                                             </div>
                                             <span className={`px-2 py-1 rounded-full text-xs font-medium self-start ${account.is_closed
@@ -313,6 +313,22 @@ export default function ElParche() {
                 onAccountCreated={handleAccountCreated}
                 token={token || ''}
                 user={user}
+            />
+
+            {/* Modal de confirmación para eliminar */}
+            <ConfirmModal
+                isOpen={showDeleteConfirm}
+                onClose={() => {
+                    setShowDeleteConfirm(false);
+                    setAccountToDelete(null);
+                }}
+                onConfirm={confirmDeleteAccount}
+                title="Eliminar Parche"
+                message="¿Estás seguro de que quieres eliminar este parche? Toda la información asociada se eliminará permanentemente y no se puede deshacer."
+                confirmText="Sí, eliminar"
+                cancelText="Cancelar"
+                type="danger"
+                icon={<Trash2 className="h-6 w-6 text-red-600" />}
             />
         </div>
     );

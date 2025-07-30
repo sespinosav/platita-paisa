@@ -1,6 +1,6 @@
 'use client';
 
-import { History, TrendingUp, TrendingDown } from 'lucide-react';
+import { History, TrendingUp, TrendingDown, Users } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { Transaction } from '@/lib/utils';
 
@@ -84,9 +84,15 @@ export default function TransactionHistory({ transactions, onTransactionDeleted,
 
       <ul className="space-y-4">
         {transactions.map((tx) => (
-          <li key={tx.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors">
+          <li key={tx.id} className={`flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors ${
+            tx.isFromSharedAccount 
+              ? 'border-purple-200 bg-purple-50/50' 
+              : 'border-gray-100'
+          }`}>
             <div className="flex items-center">
-              {tx.type === 'ingreso' ? (
+              {tx.isFromSharedAccount ? (
+                <Users className="w-5 h-5 text-purple-500 mr-3 flex-shrink-0" />
+              ) : tx.type === 'ingreso' ? (
                 <TrendingUp className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
               ) : (
                 <TrendingDown className="w-5 h-5 text-red-500 mr-3 flex-shrink-0" />
@@ -94,6 +100,11 @@ export default function TransactionHistory({ transactions, onTransactionDeleted,
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-gray-800 truncate">
                   {tx.description || tx.category}
+                  {tx.isFromSharedAccount && (
+                    <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                      Parche
+                    </span>
+                  )}
                 </p>
                 <p className="text-sm font-semibold">
                   <span className={tx.type === 'ingreso' ? 'text-green-600' : 'text-red-600'}>
@@ -101,7 +112,9 @@ export default function TransactionHistory({ transactions, onTransactionDeleted,
                   </span>
                 </p>
                 <div className="flex items-center gap-2 text-xs text-gray-400">
-                  <span className="bg-gray-100 px-2 py-1 rounded-full text-gray-600">
+                  <span className={`px-2 py-1 rounded-full text-gray-600 ${
+                    tx.isFromSharedAccount ? 'bg-purple-100' : 'bg-gray-100'
+                  }`}>
                     {tx.category}
                   </span>
                   <span>•</span>
@@ -113,7 +126,11 @@ export default function TransactionHistory({ transactions, onTransactionDeleted,
             </div>
             <button
               onClick={() => handleDelete(tx.id)}
-              className="cursor-pointer ml-4 px-3 py-1 text-xs text-red-600 border border-red-200 rounded-md hover:bg-red-50 hover:border-red-300 transition-colors flex-shrink-0"
+              className={`cursor-pointer ml-4 px-3 py-1 text-xs border rounded-md transition-colors flex-shrink-0 ${
+                tx.isFromSharedAccount
+                  ? 'text-purple-600 border-purple-200 hover:bg-purple-50 hover:border-purple-300'
+                  : 'text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300'
+              }`}
               title="Eliminar transacción"
             >
               Eliminar

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import AddSharedTransactionModal from '@/components/AddSharedTransactionModal';
 import SharedAccountSettlement from '@/components/SharedAccountSettlement';
+import ConfirmModal from '@/components/ConfirmModal';
 import { formatCurrency } from '@/lib/utils';
 
 interface SharedAccountDetailsProps {
@@ -75,6 +76,9 @@ export default function SharedAccountDetails({
   const [loading, setLoading] = useState(true);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [showSettlement, setShowSettlement] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'transactions' | 'summary'>('transactions');
 
   const fetchAccountDetails = async () => {
@@ -120,10 +124,10 @@ export default function SharedAccountDetails({
   };
 
   const handleCloseAccount = async () => {
-    if (!confirm('¿Estás seguro de que querés cerrar este parche? No se podrán agregar más movimientos.')) {
-      return;
-    }
+    setShowCloseConfirm(true);
+  };
 
+  const confirmCloseAccount = async () => {
     try {
       const response = await fetch(`/api/shared-accounts/${accountId}/close`, {
         method: 'PATCH',
@@ -140,12 +144,15 @@ export default function SharedAccountDetails({
   };
 
   const handleDeleteTransaction = async (transactionId: number) => {
-    if (!confirm('¿Estás seguro de que querés eliminar esta transacción?')) {
-      return;
-    }
+    setTransactionToDelete(transactionId);
+    setShowDeleteConfirm(true);
+  };
 
+  const confirmDeleteTransaction = async () => {
+    if (!transactionToDelete) return;
+    
     try {
-      const response = await fetch(`/api/shared-transactions/${transactionId}`, {
+      const response = await fetch(`/api/shared-transactions/${transactionToDelete}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -155,6 +162,8 @@ export default function SharedAccountDetails({
       }
     } catch (error) {
       console.error('Error deleting transaction:', error);
+    } finally {
+      setTransactionToDelete(null);
     }
   };
 
@@ -554,6 +563,35 @@ export default function SharedAccountDetails({
         onClose={() => setShowSettlement(false)}
         accountId={accountId}
         token={token}
+      />
+
+      {/* Modal de confirmación para cerrar cuenta */}
+      <ConfirmModal
+        isOpen={showCloseConfirm}
+        onClose={() => setShowCloseConfirm(false)}
+        onConfirm={confirmCloseAccount}
+        title="Cerrar Parche"
+        message="¿Estás seguro de que querés cerrar este parche? No se podrán agregar más movimientos y se generarán los gastos individuales correspondientes."
+        confirmText="Sí, cerrar parche"
+        cancelText="Cancelar"
+        type="warning"
+        icon={<Lock className="h-6 w-6 text-yellow-600" />}
+      />
+
+      {/* Modal de confirmación para eliminar transacción */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setTransactionToDelete(null);
+        }}
+        onConfirm={confirmDeleteTransaction}
+        title="Eliminar Transacción"
+        message="¿Estás seguro de que querés eliminar esta transacción? Esta acción no se puede deshacer."
+        confirmText="Sí, eliminar"
+        cancelText="Cancelar"
+        type="danger"
+        icon={<Trash2 className="h-6 w-6 text-red-600" />}
       />
     </div>
   );

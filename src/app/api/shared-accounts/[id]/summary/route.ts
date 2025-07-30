@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const { data, error } = await supabase
     .from('shared_transactions')
     .select('type, amount, category')
-    .eq('shared_account_id', Number(params.id));
+    .eq('shared_account_id', Number(id));
   if (error) return NextResponse.json({ summary: null });
   let total_ingresos = 0, total_gastos = 0;
   let category_breakdown: any[] = [];

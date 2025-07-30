@@ -45,7 +45,10 @@ export async function GET(request: NextRequest) {
     }
     
     return NextResponse.json({ 
-      transactions: transactions || [],
+      transactions: (transactions || []).map(t => ({
+        ...t,
+        isFromSharedAccount: t.shared_account_id !== null && t.shared_account_id !== undefined
+      })),
       period: period,
       dateRange: dateRange,
       count: transactions?.length || 0

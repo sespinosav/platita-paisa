@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { verifyToken } from '@/lib/auth';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const awaitedParams = await params;
   const { data, error } = await supabase
     .from('shared_transactions')
     .select('id, type, amount, category, description, created_at, added_by_user_id')
-    .eq('shared_account_id', Number(params.id));
+    .eq('shared_account_id', Number(awaitedParams.id));
   if (error) return NextResponse.json({ transactions: [] });
   // Get usernames for added_by_user_id
   const userIds = data?.map((t: any) => t.added_by_user_id) || [];
@@ -38,6 +39,20 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       .in('id', participantIds);
     participants = partRows || [];
   }
+
+  // Get usernames for all participant users (not just transaction creators)
+  const participantUserIds = participants
+    .filter(p => p.user_id)
+    .map(p => p.user_id);
+  
+  let participantUsernames: any[] = [];
+  if (participantUserIds.length > 0) {
+    const { data: participantUsers } = await supabase
+      .from('users')
+      .select('id, username')
+      .in('id', participantUserIds);
+    participantUsernames = participantUsers || [];
+  }
   // Format transactions
   const transactions = (data || []).map((t: any) => ({
     id: t.id,
@@ -49,17 +64,32 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     added_by_username: usernames.find((u: any) => u.id === t.added_by_user_id)?.username || '',
     payers: payers.filter((p: any) => p.shared_transaction_id === t.id).map((p: any) => {
       const participant = participants.find((pt: any) => pt.id === p.participant_id);
+      let participant_name = '';
+      
+      if (participant) {
+        if (participant.user_id) {
+          // Es un usuario registrado
+          participant_name = participantUsernames.find((u: any) => u.id === participant.user_id)?.username || `Usuario ${participant.user_id}`;
+        } else {
+          // Es un invitado
+          participant_name = participant.guest_name || 'Invitado sin nombre';
+        }
+      } else {
+        participant_name = 'Participante no encontrado';
+      }
+      
       return {
         participant_id: p.participant_id,
         amount_paid: p.amount_paid,
-        participant_name: participant?.user_id ? usernames.find((u: any) => u.id === participant.user_id)?.username : participant?.guest_name || ''
+        participant_name
       };
     })
   }));
   return NextResponse.json({ transactions });
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const awaitedParams = await params;
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
   if (!token) return NextResponse.json({ error: 'Token requerido' }, { status: 401 });
   const payload = verifyToken(token);
@@ -70,7 +100,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const { data: transaction, error: transError } = await supabase
     .from('shared_transactions')
     .insert({
-      shared_account_id: Number(params.id),
+      shared_account_id: Number(awaitedParams.id),
       added_by_user_id: userId,
       type,
       amount,

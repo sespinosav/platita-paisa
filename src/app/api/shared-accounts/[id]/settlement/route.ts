@@ -41,7 +41,7 @@ interface TransactionDetail {
   category: string;
 }
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const awaitedParams = await params;
     const sharedAccountId = Number(awaitedParams.id);
@@ -261,7 +261,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // Función auxiliar para crear sugerencias de pagos (opcional)
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const awaitedParams = await params;
     const sharedAccountId = Number(awaitedParams.id);

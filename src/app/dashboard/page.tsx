@@ -6,7 +6,6 @@ import TransactionHistory from '@/components/TransactionHistory';
 import CategoryChart from '@/components/CategoryChart';
 import { formatCurrency } from '@/lib/utils';
 import type { Transaction } from '@/lib/utils';
-import { GoTrueAdminApi } from '@supabase/supabase-js';
 import GoToSharedAccountsButton from '@/components/GoToSharedAccountsButton';
 
 interface DashboardProps {
@@ -19,6 +18,7 @@ interface BalanceData {
   balance: number;
   ingresos: number;
   gastos: number;
+  sharedAccountExpenses?: number;
   categoryData: any[];
 }
 
@@ -50,6 +50,7 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
     balance: 0,
     ingresos: 0,
     gastos: 0,
+    sharedAccountExpenses: 0,
     categoryData: []
   });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -133,7 +134,7 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
                 <Sparkles className="w-7 h-7 text-yellow-500" />
                 <div>
                   <h1 className="text-xl font-bold text-gray-900">Platita Paisa</h1>
-                  <p className="text-sm text-gray-600">¡Hola, {user.username}!</p>
+                  <p className="text-sm text-gray-600">¡Hola, {user?.username || 'Usuario'}!</p>
                 </div>
               </div>
               <button
@@ -167,7 +168,7 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
               <Sparkles className="w-8 h-8 text-yellow-500" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Platita Paisa</h1>
-                <p className="text-sm text-gray-600">¡Hola, {user.username}!</p>
+                <p className="text-sm text-gray-600">¡Hola, {user?.username || 'Usuario'}!</p>
                 {userCount !== null && (
                   <span className="text-xs text-purple-600 font-semibold block mt-1">
                     ¡Ya somos {userCount} parceros usando la plataforma!
@@ -236,7 +237,7 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
         </div>
 
         {/* Balance Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-gradient-to-r from-green-400 to-blue-500 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-transform">
             <div className="flex items-center justify-between">
               <div>
@@ -281,6 +282,21 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
               <TrendingDown className="w-8 h-8 text-red-500" />
             </div>
           </div>
+
+          <div className="bg-gradient-to-r from-purple-400 to-pink-500 rounded-xl shadow-lg p-6 text-white transform hover:scale-105 transition-transform">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-purple-100 text-sm font-medium">Gastos de Parches</p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(balanceData.sharedAccountExpenses || 0)}
+                </p>
+                <p className="text-xs text-purple-100 mt-1">
+                  {getPeriodLabel()}
+                </p>
+              </div>
+              <Users className="w-8 h-8 text-purple-100" />
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -295,7 +311,6 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
               transactions={transactions}
               token={token}
               onTransactionDeleted={fetchData}
-              filterPeriod={selectedPeriod}
             />
           </div>
 
