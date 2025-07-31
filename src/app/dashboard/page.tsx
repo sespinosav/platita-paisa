@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { LogOut, Wallet, TrendingUp, TrendingDown, Sparkles, Calendar, Filter, Users } from 'lucide-react';
+import { LogOut, Wallet, TrendingUp, TrendingDown, Sparkles, Calendar, Filter, Users, Crown } from 'lucide-react';
 import TransactionForm from '@/components/TransactionForm';
 import TransactionHistory from '@/components/TransactionHistory';
 import CategoryChart from '@/components/CategoryChart';
@@ -152,13 +152,23 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
                   ¡Ya somos {userCount} parceros!
                 </span>
               )}
-              <a
-                href="/shared-accounts"
-                className="cursor-pointer inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-3 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg text-sm font-medium w-full"
-              >
-                <Users className="w-4 h-4" />
-                <span>El Parche 🎉</span>
-              </a>
+              <div className="grid grid-cols-1 gap-2">{/* grid-cols-2 when premium will be visible */}
+                <a
+                  href="/premium"
+                  className="hidden"
+                  /* when premium will be visible "cursor-pointer inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-3 rounded-lg hover:from-yellow-500 hover:to-orange-600 transition-all shadow-lg text-sm font-medium"*/
+                >
+                  <Crown className="w-4 h-4" />
+                  <span>Premium 👑</span>
+                </a>
+                <a
+                  href="/shared-accounts"
+                  className="cursor-pointer inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-3 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg text-sm font-medium"
+                >
+                  <Users className="w-4 h-4" />
+                  <span>El Parche 🎉</span>
+                </a>
+              </div>
             </div>
           </div>
 
@@ -178,6 +188,14 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
             </div>
             
             <div className="flex items-center space-x-4">
+              <a
+                href="/premium"
+                className="hidden"
+                /*"cursor-pointer inline-flex items-center space-x-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 rounded-lg hover:from-yellow-500 hover:to-orange-600 transition-all shadow-lg font-medium"*/
+              >
+                <Crown className="w-5 h-5" />
+                <span>Premium 👑</span>
+              </a>
               <a
                 href="/shared-accounts"
                 className="cursor-pointer inline-flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg font-medium"

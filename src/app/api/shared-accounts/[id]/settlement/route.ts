@@ -278,7 +278,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const creditors = data.settlement.filter((p: any) => p.amount_to_receive > 0);
     const debtors = data.settlement.filter((p: any) => p.amount_to_pay > 0);
 
-    const suggestions = [];
+    const suggestions: { from: string; to: string; amount: number }[] = [];
     let debtorsCopy = [...debtors];
     let creditorsCopy = [...creditors];
 

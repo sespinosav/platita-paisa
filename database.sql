@@ -115,3 +115,98 @@ BEGIN
             FOREIGN KEY (shared_account_id) REFERENCES shared_accounts (id);
     END IF;
 END $$;
+
+-- NUEVAS TABLAS PARA FUNCIONALIDADES PREMIUM
+
+-- Agregar campo premium a usuarios
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_premium BOOLEAN DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS premium_expires_at TIMESTAMP NULL;
+
+-- Tabla para presupuestos
+CREATE TABLE IF NOT EXISTS budgets (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  category TEXT NOT NULL,
+  amount INTEGER NOT NULL,
+  period TEXT NOT NULL CHECK (period IN ('weekly', 'monthly', 'yearly')),
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+-- Tabla para bolsillos (subcuentas de ahorro)
+CREATE TABLE IF NOT EXISTS pockets (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  target_amount INTEGER NOT NULL,
+  current_amount INTEGER DEFAULT 0,
+  color TEXT DEFAULT '#3B82F6',
+  icon TEXT DEFAULT '🎯',
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+-- Tabla para movimientos de bolsillos
+CREATE TABLE IF NOT EXISTS pocket_transactions (
+  id SERIAL PRIMARY KEY,
+  pocket_id INTEGER NOT NULL,
+  amount INTEGER NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('deposit', 'withdraw')),
+  description TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (pocket_id) REFERENCES pockets (id) ON DELETE CASCADE
+);
+
+-- Tabla para objetivos financieros
+CREATE TABLE IF NOT EXISTS financial_goals (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  target_amount INTEGER NOT NULL,
+  current_amount INTEGER DEFAULT 0,
+  target_date DATE NOT NULL,
+  category TEXT NOT NULL,
+  icon TEXT DEFAULT '🎯',
+  color TEXT DEFAULT '#10B981',
+  is_completed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  completed_at TIMESTAMP NULL,
+  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+-- Tabla para contribuciones a objetivos
+CREATE TABLE IF NOT EXISTS goal_contributions (
+  id SERIAL PRIMARY KEY,
+  goal_id INTEGER NOT NULL,
+  amount INTEGER NOT NULL,
+  description TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (goal_id) REFERENCES financial_goals (id) ON DELETE CASCADE
+);
+
+-- Tabla para estadísticas avanzadas (cache de datos calculados)
+CREATE TABLE IF NOT EXISTS user_statistics (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  stat_type TEXT NOT NULL,
+  period TEXT NOT NULL,
+  value DECIMAL(15,2) NOT NULL,
+  metadata JSONB,
+  calculated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+  UNIQUE(user_id, stat_type, period)
+);
+
+-- Índices para rendimiento
+CREATE INDEX IF NOT EXISTS idx_budgets_user_period ON budgets (user_id, period, is_active);
+CREATE INDEX IF NOT EXISTS idx_pockets_user ON pockets (user_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_pocket_transactions_pocket ON pocket_transactions (pocket_id);
+CREATE INDEX IF NOT EXISTS idx_financial_goals_user ON financial_goals (user_id, is_completed);
+CREATE INDEX IF NOT EXISTS idx_goal_contributions_goal ON goal_contributions (goal_id);
+CREATE INDEX IF NOT EXISTS idx_user_statistics ON user_statistics (user_id, stat_type, period);
