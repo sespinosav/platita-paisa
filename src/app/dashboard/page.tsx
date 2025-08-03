@@ -176,7 +176,6 @@ export default function Dashboard({ token, user, onLogout, onDatabaseError }: Da
               <div className="grid grid-cols-1 gap-2">{/* grid-cols-2 when premium will be visible */}
                 <a
                   href="/premium"
-                  className="hidden"
                   /* when premium will be visible "cursor-pointer inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-3 rounded-lg hover:from-yellow-500 hover:to-orange-600 transition-all shadow-lg text-sm font-medium"*/
                 >
                   <Crown className="w-4 h-4" />
