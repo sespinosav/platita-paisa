@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, DollarSign } from 'lucide-react';
-import { formatCurrency, formatNumber } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 
 interface TransactionFormProps {
   token: string;
   onTransactionAdded: () => void;
+  onDatabaseError?: () => void; // Nueva prop para manejar errores de base de datos
 }
 
-export default function TransactionForm({ token, onTransactionAdded }: TransactionFormProps) {
+export default function TransactionForm({ token, onTransactionAdded, onDatabaseError }: TransactionFormProps) {
   const [type, setType] = useState<'ingreso' | 'gasto'>('ingreso');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
@@ -29,10 +30,21 @@ export default function TransactionForm({ token, onTransactionAdded }: Transacti
           'Authorization': `Bearer ${token}`,
         },
       });
+
+      if (response.status === 401 || response.status === 500) {
+        if (onDatabaseError) {
+          onDatabaseError();
+          return;
+        }
+      }
+
       const data = await response.json();
       setCategories(data.categories || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
+      if (onDatabaseError) {
+        onDatabaseError();
+      }
     }
   };
 
@@ -55,6 +67,13 @@ export default function TransactionForm({ token, onTransactionAdded }: Transacti
         }),
       });
 
+      if (response.status === 401 || response.status === 500) {
+        if (onDatabaseError) {
+          onDatabaseError();
+          return;
+        }
+      }
+
       const data = await response.json();
 
       if (data.success) {
@@ -69,6 +88,9 @@ export default function TransactionForm({ token, onTransactionAdded }: Transacti
       }
     } catch (error) {
       console.error('Error adding transaction:', error);
+      if (onDatabaseError) {
+        onDatabaseError();
+      }
     } finally {
       setLoading(false);
     }

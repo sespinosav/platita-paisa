@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Calendar, Plus, Trash2, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+import { Calendar, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { formatCurrency, defaultCategories } from '@/lib/utils';
+import ConfirmModal from '@/components/ConfirmModal';
 
 interface Budget {
   id: number;
@@ -31,8 +32,11 @@ const translatePeriod = (period: string): string => {
 
 export default function PremiumBudgets({ token }: PremiumBudgetsProps) {
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [userCategories, setUserCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [budgetToDelete, setBudgetToDelete] = useState<Budget | null>(null);
   const [formData, setFormData] = useState({
     category: '',
     amount: '',
@@ -43,6 +47,7 @@ export default function PremiumBudgets({ token }: PremiumBudgetsProps) {
 
   useEffect(() => {
     fetchBudgets();
+    fetchUserCategories();
   }, []);
 
   const fetchBudgets = async () => {
@@ -60,6 +65,27 @@ export default function PremiumBudgets({ token }: PremiumBudgetsProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchUserCategories = async () => {
+    try {
+      const response = await fetch('/api/categories', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setUserCategories(data.categories || []);
+      }
+    } catch (error) {
+      console.error('Error fetching user categories:', error);
+    }
+  };
+
+  // Combinar categorías predefinidas con las del usuario, eliminando duplicados
+  const getAllCategories = () => {
+    const allCategories = [...defaultCategories, ...userCategories];
+    return [...new Set(allCategories)].sort();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -97,11 +123,16 @@ export default function PremiumBudgets({ token }: PremiumBudgetsProps) {
     }
   };
 
-  const deleteBudget = async (budgetId: number) => {
-    if (!confirm('¿Estás seguro de eliminar este presupuesto?')) return;
+  const deleteBudget = async (budget: Budget) => {
+    setBudgetToDelete(budget);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteBudget = async () => {
+    if (!budgetToDelete) return;
     
     try {
-      const response = await fetch(`/api/premium/budgets?id=${budgetId}`, {
+      const response = await fetch(`/api/premium/budgets?id=${budgetToDelete.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -111,6 +142,9 @@ export default function PremiumBudgets({ token }: PremiumBudgetsProps) {
       }
     } catch (error) {
       console.error('Error deleting budget:', error);
+    } finally {
+      setBudgetToDelete(null);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -183,9 +217,24 @@ export default function PremiumBudgets({ token }: PremiumBudgetsProps) {
                   required
                 >
                   <option value="">Seleccionar categoría</option>
-                  {defaultCategories.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
+                  {/* Categorías predefinidas */}
+                  <optgroup label="Categorías Predefinidas">
+                    {defaultCategories.map(category => (
+                      <option key={`default-${category}`} value={category}>{category}</option>
+                    ))}
+                  </optgroup>
+                  {/* Categorías del usuario */}
+                  {userCategories.length > 0 && (
+                    <optgroup label="Mis Categorías Personalizadas">
+                      {userCategories
+                        .filter(category => !defaultCategories.includes(category))
+                        .map(category => (
+                          <option key={`user-${category}`} value={category}>
+                            {category} 👤
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
               
@@ -201,6 +250,11 @@ export default function PremiumBudgets({ token }: PremiumBudgetsProps) {
                   placeholder="0"
                   required
                 />
+                {formData.amount && parseInt(formData.amount) > 0 && (
+                  <p className="mt-2 text-sm text-gray-600 font-medium">
+                    💰 {formatCurrency(parseInt(formData.amount))}
+                  </p>
+                )}
               </div>
               
               <div>
@@ -296,7 +350,7 @@ export default function PremiumBudgets({ token }: PremiumBudgetsProps) {
                     {budget.category}
                   </h3>
                   <button
-                    onClick={() => deleteBudget(budget.id)}
+                    onClick={() => deleteBudget(budget)}
                     className="cursor-pointer text-gray-400 hover:text-red-500 transition-colors"
                   >
                     <Trash2 className="w-5 h-5" />
@@ -363,6 +417,25 @@ export default function PremiumBudgets({ token }: PremiumBudgetsProps) {
           })}
         </div>
       )}
+
+      {/* Modal de confirmación para eliminar presupuesto */}
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setBudgetToDelete(null);
+        }}
+        onConfirm={confirmDeleteBudget}
+        title="Eliminar Presupuesto"
+        message={budgetToDelete ? 
+          `¿Estás seguro de que deseas eliminar el presupuesto de "${budgetToDelete.category}"? Esta acción no se puede deshacer.` : 
+          '¿Estás seguro de que deseas eliminar este presupuesto?'
+        }
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        type="danger"
+        icon={<Trash2 className="h-6 w-6 text-red-600" />}
+      />
     </div>
   );
 }

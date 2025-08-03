@@ -52,6 +52,12 @@ export default function SharedAccountPage() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
+      if (response.status === 401 || response.status === 500) {
+        // Error de autenticación o servidor - redirigir con error de base de datos
+        router.push('/?db-error=true');
+        return;
+      }
+
       if (response.status === 403) {
         setError('No tienes acceso a esta cuenta compartida.');
         setLoading(false);
@@ -71,8 +77,8 @@ export default function SharedAccountPage() {
       setLoading(false);
     } catch (error) {
       console.error('Error checking access:', error);
-      setError('Error verificando acceso a la cuenta.');
-      setLoading(false);
+      // Error de conexión - redirigir con error de base de datos
+      router.push('/?db-error=true');
     }
   };
 

@@ -60,10 +60,20 @@ export default function ElParche() {
             const response = await fetch('/api/shared-accounts', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+
+            // Verificar errores de autenticación que podrían indicar reset de base de datos
+            if (response.status === 401 || response.status === 500) {
+                // Redirigir al inicio para mostrar mensaje de error
+                router.push('/?db-error=true');
+                return;
+            }
+
             const data = await response.json();
             setSharedAccounts(data.accounts || []);
         } catch (error) {
             console.error('Error fetching shared accounts:', error);
+            // Error de conexión - redirigir con parámetro de error
+            router.push('/?db-error=true');
         } finally {
             setLoading(false);
         }

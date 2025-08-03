@@ -12,6 +12,7 @@ interface DashboardProps {
   token: string;
   user: any;
   onLogout: () => void;
+  onDatabaseError?: () => void; // Nueva prop para manejar errores de base de datos
 }
 
 interface BalanceData {
@@ -24,7 +25,7 @@ interface BalanceData {
 
 type FilterPeriod = 'today' | 'week' | 'month' | 'year';
 
-export default function Dashboard({ token, user, onLogout }: DashboardProps) {
+export default function Dashboard({ token, user, onLogout, onDatabaseError }: DashboardProps) {
   const [userCount, setUserCount] = useState<number | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<FilterPeriod>('today');
 
@@ -67,6 +68,22 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
         })
       ]);
 
+      // Verificar errores de autenticación que podrían indicar problemas de base de datos
+      if (balanceResponse.status === 401 || transactionsResponse.status === 401) {
+        if (onDatabaseError) {
+          onDatabaseError();
+          return;
+        }
+      }
+
+      // Verificar errores del servidor
+      if (balanceResponse.status === 500 || transactionsResponse.status === 500) {
+        if (onDatabaseError) {
+          onDatabaseError();
+          return;
+        }
+      }
+
       const balanceData = await balanceResponse.json();
       const transactionsData = await transactionsResponse.json();
 
@@ -74,6 +91,10 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
       setTransactions(transactionsData.transactions || []);
     } catch (error) {
       console.error('Error fetching data:', error);
+      // Error de conexión podría indicar problemas de base de datos
+      if (onDatabaseError) {
+        onDatabaseError();
+      }
     } finally {
       setLoading(false);
     }
@@ -323,6 +344,7 @@ export default function Dashboard({ token, user, onLogout }: DashboardProps) {
             <TransactionForm
               token={token}
               onTransactionAdded={handleTransactionAdded}
+              onDatabaseError={onDatabaseError}
             />
 
             <TransactionHistory
